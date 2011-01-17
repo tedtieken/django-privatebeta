@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.http import HttpResponseRedirect
+import re
 
 class PrivateBetaMiddleware(object):
     """
@@ -32,9 +33,19 @@ class PrivateBetaMiddleware(object):
         self.never_allow_views = getattr(settings, 'PRIVATEBETA_NEVER_ALLOW_VIEWS', [])
         self.always_allow_views = getattr(settings, 'PRIVATEBETA_ALWAYS_ALLOW_VIEWS', [])
         self.always_allow_modules = getattr(settings, 'PRIVATEBETA_ALWAYS_ALLOW_MODULES', [])
+        self.always_allow_urls = getattr(settings, 'PRIVATEBETA_ALWAYS_ALLOW_URLS', [])
+        self.restrict = getattr(settings, 'PRIVATEBETA_RESTRICT', True)
+
         self.redirect_url = getattr(settings, 'PRIVATEBETA_REDIRECT_URL', '/invite/')
 
+    def process_request(self, request):
+        if self.restrict:
+            request.is_private_beta = True
+
     def process_view(self, request, view_func, view_args, view_kwargs):
+        if not self.restrict:
+            return
+        
         if request.user.is_authenticated():
             # User is logged in, no need to check anything else.
             return
@@ -51,5 +62,9 @@ class PrivateBetaMiddleware(object):
             return
         if '%s' % view_func.__module__ in whitelisted_modules:
             return
-        else:
-            return HttpResponseRedirect(self.redirect_url)
+
+        for allow_url in self.always_allow_urls:
+            if re.match(allow_url, request.path):
+                return
+                
+        return HttpResponseRedirect(self.redirect_url)
