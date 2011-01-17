@@ -26,7 +26,7 @@ You will also need to add ::
 
     urlpatterns = patterns('',
         ...
-        (r'^invites/', include('privatebeta.urls')),
+        (r'^invite/', include('privatebeta.urls')),
     )
 
 You will also need to create two templates.  The first is
